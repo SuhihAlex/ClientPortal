@@ -14,7 +14,6 @@ import {
   ShieldCheck,
   Sparkles,
   Users,
-  Menu,
 } from "lucide-react";
 
 import { BrandLogo } from "@/components/brand";
@@ -123,57 +122,8 @@ export default function Home() {
         />
 
         <Container className="relative">
-          <header className="relative z-20 animate-reveal-down pt-5 sm:pt-6">
-            <div className="grid min-h-16 grid-cols-[1fr_auto] overflow-hidden rounded-[1.25rem] border border-border/80 bg-white/85 shadow-[0_12px_40px_rgba(15,23,42,0.07)] backdrop-blur-xl lg:grid-cols-[240px_1fr_240px]">
-              <div className="flex items-center border-r border-border/70 px-4 sm:px-5">
-                <BrandLogo />
-              </div>
 
-              <nav
-                className="hidden items-center justify-center gap-1 px-4 lg:flex"
-                aria-label="Primary navigation"
-              >
-                <HeaderNavItem href="#product" label="Product" active />
-                <HeaderNavItem href="#features" label="Features" />
-                <HeaderNavItem href="#workflow" label="Workflow" />
-                <HeaderNavItem href="#pricing" label="Pricing" />
-              </nav>
-
-              <div className="flex items-center justify-end gap-2 px-3 sm:px-4 lg:border-l lg:border-border/70">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="hidden text-muted-foreground hover:text-foreground sm:inline-flex"
-                >
-                  Sign in
-                </Button>
-
-                <Button
-                  size="sm"
-                  className="group rounded-xl px-4 shadow-[0_8px_22px_rgba(35,49,89,0.18)]"
-                >
-                  Start free
-                  <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="icon-sm"
-                  className="rounded-xl lg:hidden"
-                  aria-label="Open navigation"
-                >
-                  <Menu />
-                </Button>
-              </div>
-            </div>
-
-            <div className="mx-auto mt-3 hidden w-fit items-center gap-2 rounded-full border bg-white/70 px-3 py-1.5 text-[11px] text-muted-foreground shadow-sm backdrop-blur sm:flex lg:hidden">
-              <span className="size-1.5 rounded-full bg-emerald-500" />
-              Client workspace is online
-            </div>
-          </header>
-
-          <div className="pb-16 pt-16 text-center sm:pb-20 sm:pt-24 lg:pb-24 lg:pt-28">
+          <div className="pb-16 pt-20 text-center sm:pb-20 sm:pt-28 lg:pb-24 lg:pt-32">
             <div className="mx-auto max-w-4xl">
               <Badge
                 variant="outline"
@@ -1032,36 +982,6 @@ function StageRow({
 
       <span className="text-xs text-muted-foreground">{status}</span>
     </div>
-  );
-}
-
-function HeaderNavItem({
-  href,
-  label,
-  active = false,
-}: {
-  href: string;
-  label: string;
-  active?: boolean;
-}) {
-  return (
-    <a
-      href={href}
-      className={`relative rounded-xl px-4 py-2 text-sm font-medium transition-all ${
-        active
-          ? "bg-secondary text-foreground shadow-sm"
-          : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
-      }`}
-    >
-      {label}
-
-      {active && (
-        <span
-          className="absolute inset-x-4 -bottom-[17px] h-px bg-primary"
-          aria-hidden="true"
-        />
-      )}
-    </a>
   );
 }
 

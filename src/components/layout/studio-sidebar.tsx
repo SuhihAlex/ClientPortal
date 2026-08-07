@@ -12,6 +12,7 @@ import { StudioNavigation } from "@/components/navigation/studio-navigation";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { signOutAction } from "@/app/(auth)/actions";
 
 export function StudioSidebar() {
   return (
@@ -195,14 +196,17 @@ function SidebarAccount() {
           Help
         </Button>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="justify-start rounded-xl text-xs text-sidebar-foreground/40 hover:bg-white/[0.05] hover:text-white"
-        >
-          <LogOut />
-          Sign out
-        </Button>
+        <form action={signOutAction}>
+          <Button
+            type="submit"
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start rounded-xl text-xs text-sidebar-foreground/40 hover:bg-white/[0.05] hover:text-white"
+          >
+            <LogOut />
+            Sign out
+          </Button>
+        </form>
       </div>
     </div>
   );

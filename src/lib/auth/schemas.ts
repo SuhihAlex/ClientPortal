@@ -73,3 +73,11 @@ export function createWorkspaceSlug(value: string) {
 
   return slug || "workspace";
 }
+
+export function getSafeRedirectPath(value: string) {
+  if (!value.startsWith("/") || value.startsWith("//")) {
+    return null;
+  }
+
+  return value;
+}
