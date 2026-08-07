@@ -44,7 +44,13 @@ export default async function LoginPage({
         <>
           New to ClientPortal?{" "}
           <Link
-            href="/register"
+            href={
+              params.next
+                ? `/register?next=${encodeURIComponent(
+                    params.next,
+                  )}`
+                : "/register"
+            }
             className="font-medium text-primary"
           >
             Create an account

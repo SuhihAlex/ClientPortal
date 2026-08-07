@@ -43,3 +43,35 @@ export async function getCurrentMembership(
 export function getRoleDestination(role: WorkspaceRole) {
   return role === "client" ? "/portal" : "/app";
 }
+
+export async function getPendingInvitationPath(
+  supabase: SupabaseClient,
+  email: string,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("invitations")
+    .select("token_hash, status, expires_at")
+    .eq("email", email.toLowerCase())
+    .eq("status", "pending")
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Pending invitation lookup failed:", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+
+    return null;
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  return null;
+}

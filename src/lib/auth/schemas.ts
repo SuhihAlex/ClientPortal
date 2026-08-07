@@ -36,6 +36,25 @@ export const registerSchema = z.object({
     .max(72, "Password must contain at most 72 characters."),
 });
 
+export const invitedRegisterSchema = z.object({
+  fullName: z
+    .string()
+    .trim()
+    .min(2, "Full name must contain at least 2 characters.")
+    .max(100, "Full name is too long."),
+
+  email: z
+    .string()
+    .trim()
+    .email("Enter a valid email address.")
+    .transform((value) => value.toLowerCase()),
+
+  password: z
+    .string()
+    .min(8, "Password must contain at least 8 characters.")
+    .max(72, "Password must contain at most 72 characters."),
+});
+
 export const forgotPasswordSchema = z.object({
   email: z
     .string()
@@ -81,3 +100,33 @@ export function getSafeRedirectPath(value: string) {
 
   return value;
 }
+
+export function isInvitationRedirectPath(
+  value: string | null,
+) {
+  if (!value) {
+    return false;
+  }
+
+  return /^\/invite\/[a-f0-9]{64}$/.test(value);
+}
+
+export const createInvitationSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .email("Enter a valid email address.")
+    .transform((value) => value.toLowerCase()),
+
+  role: z.enum(["team_member", "client"], {
+    message: "Select a valid invitation role.",
+  }),
+});
+
+export const invitationTokenSchema = z
+  .string()
+  .trim()
+  .regex(
+    /^[a-f0-9]{64}$/,
+    "The invitation token is invalid.",
+  );

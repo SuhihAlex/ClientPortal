@@ -6,6 +6,8 @@ import {
   createWorkspaceSlug,
   forgotPasswordSchema,
   getSafeRedirectPath,
+  invitedRegisterSchema,
+  isInvitationRedirectPath,
   loginSchema,
   registerSchema,
   resetPasswordSchema,
@@ -32,6 +34,7 @@ export async function loginAction(
     email: getFormString(formData, "email"),
     password: getFormString(formData, "password"),
   });
+
   const requestedNext = getSafeRedirectPath(
     getFormString(formData, "next"),
   );
@@ -54,38 +57,57 @@ export async function loginAction(
     return createAuthError("Invalid email or password.");
   }
 
-  let destination = "/app";
+  // Invitation flow is special:
+  // the user does not have a workspace membership yet.
+  // They must return to the invitation page first and accept it.
+  if (
+    requestedNext &&
+    isInvitationRedirectPath(requestedNext)
+  ) {
+    redirect(requestedNext);
+  }
+
+  let membership;
 
   try {
-    const membership = await getCurrentMembership(
+    membership = await getCurrentMembership(
       supabase,
       data.user.id,
     );
-
-    if (membership) {
-      destination = getRoleDestination(membership.role);
-    }
-
-    if (
-      requestedNext &&
-      membership &&
-      (
-        (
-          membership.role === "client" &&
-          requestedNext.startsWith("/portal")
-        ) ||
-        (
-          membership.role !== "client" &&
-          requestedNext.startsWith("/app")
-        )
-      )
-    ) {
-      redirect(requestedNext);
-    }
   } catch {
     return createAuthError(
       "Signed in, but the workspace could not be loaded.",
     );
+  }
+
+  if (!membership) {
+    redirect("/login?error=workspace_missing");
+  }
+
+  const destination = getRoleDestination(
+    membership.role,
+  );
+
+  if (requestedNext) {
+    const allowedRequestedPath =
+      (
+        membership.role === "client" &&
+        (
+          requestedNext === "/portal" ||
+          requestedNext.startsWith("/portal/")
+        )
+      ) ||
+      (
+        membership.role !== "client" &&
+        (
+          requestedNext === "/app" ||
+          requestedNext.startsWith("/app/")
+        )
+      );
+
+    if (allowedRequestedPath) {
+      redirect(requestedNext);
+    }
   }
 
   redirect(destination);
@@ -95,12 +117,27 @@ export async function registerAction(
   _previousState: AuthActionState,
   formData: FormData,
 ): Promise<AuthActionState> {
-  const result = registerSchema.safeParse({
+  const requestedNext = getSafeRedirectPath(
+    getFormString(formData, "next"),
+  );
+
+  const invitationRegistration =
+    isInvitationRedirectPath(requestedNext);
+
+  const rawValues = {
     fullName: getFormString(formData, "fullName"),
     workspaceName: getFormString(formData, "workspaceName"),
     email: getFormString(formData, "email"),
     password: getFormString(formData, "password"),
-  });
+  };
+
+  const result = invitationRegistration
+    ? invitedRegisterSchema.safeParse({
+        fullName: rawValues.fullName,
+        email: rawValues.email,
+        password: rawValues.password,
+      })
+    : registerSchema.safeParse(rawValues);
 
   if (!result.success) {
     return createAuthError(
@@ -110,18 +147,65 @@ export async function registerAction(
   }
 
   const supabase = await createClient();
-  const baseSlug = createWorkspaceSlug(result.data.workspaceName);
+
+  if (invitationRegistration) {
+    const callbackUrl =
+      `${getSiteUrl()}/auth/callback?next=` +
+      encodeURIComponent(requestedNext!);
+
+    const { data, error } = await supabase.auth.signUp({
+      email: result.data.email,
+      password: result.data.password,
+      options: {
+        emailRedirectTo: callbackUrl,
+        data: {
+          full_name: result.data.fullName,
+        },
+      },
+    });
+
+    if (error) {
+      return createAuthError(
+        error.message.toLowerCase().includes("already")
+          ? "An account with this email already exists."
+          : "The account could not be created. Try again.",
+      );
+    }
+
+    if (!data.user) {
+      return createAuthError(
+        "The account could not be created.",
+      );
+    }
+
+    if (data.session) {
+      redirect(requestedNext!);
+    }
+
+    return createAuthSuccess(
+      "Check your email to confirm the account, then return to your invitation.",
+    );
+  }
+
+  const ownerResult = registerSchema.parse(rawValues);
+
+  const baseSlug = createWorkspaceSlug(
+    ownerResult.workspaceName,
+  );
+
   const uniqueSuffix = crypto.randomUUID().slice(0, 8);
+
   const workspaceSlug = `${baseSlug}-${uniqueSuffix}`;
 
   const { data, error } = await supabase.auth.signUp({
-    email: result.data.email,
-    password: result.data.password,
+    email: ownerResult.email,
+    password: ownerResult.password,
     options: {
       emailRedirectTo: `${getSiteUrl()}/auth/callback`,
       data: {
-        full_name: result.data.fullName,
-        pending_workspace_name: result.data.workspaceName,
+        full_name: ownerResult.fullName,
+        pending_workspace_name:
+          ownerResult.workspaceName,
         pending_workspace_slug: workspaceSlug,
       },
     },
@@ -136,19 +220,20 @@ export async function registerAction(
   }
 
   if (!data.user) {
-    return createAuthError("The account could not be created.");
+    return createAuthError(
+      "The account could not be created.",
+    );
   }
 
-  // When email confirmation is disabled, Supabase returns a session
-  // immediately and the workspace can be created now.
   if (data.session) {
-    const { error: workspaceError } = await supabase.rpc(
-      "create_workspace_for_current_user",
-      {
-        workspace_name: result.data.workspaceName,
-        workspace_slug: workspaceSlug,
-      },
-    );
+    const { error: workspaceError } =
+      await supabase.rpc(
+        "create_workspace_for_current_user",
+        {
+          workspace_name: ownerResult.workspaceName,
+          workspace_slug: workspaceSlug,
+        },
+      );
 
     if (workspaceError) {
       await supabase.auth.signOut();
